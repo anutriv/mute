@@ -1,5 +1,6 @@
 import os
 import subprocess
+import threading
 from flask import Flask, request, send_file, jsonify, render_template
 from flask_cors import CORS
 from pydub import AudioSegment
@@ -19,7 +20,7 @@ PROCESSED_FOLDER = "processed"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
-app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # Allow up to 2GB uploads
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # 2GB upload limit
 
 @app.route('/', methods=['GET'])
 def home():
@@ -28,13 +29,12 @@ def home():
 def process_audio_with_mute(input_video_path, timestamps_file, output_video_path):
     extracted_audio_path = os.path.join(PROCESSED_FOLDER, "extracted_audio.wav")
 
-    # ✅ Fix 1: Extract audio using PCM encoding instead of AAC
+    # ✅ Optimized FFmpeg Audio Extraction
     subprocess.run([
         "ffmpeg", "-i", input_video_path, "-vn", "-acodec", "pcm_s16le", "-ar", "44100",
-        "-ac", "2", extracted_audio_path, "-y"
+        "-ac", "2", "-filter:a", "volume=0.8", extracted_audio_path, "-y"
     ])
 
-    # ✅ Fix 2: Verify pydub can read the extracted audio file
     try:
         original_audio = AudioSegment.from_file(extracted_audio_path, format="wav")
     except Exception as e:
@@ -57,10 +57,15 @@ def process_audio_with_mute(input_video_path, timestamps_file, output_video_path
     modified_audio_path = os.path.join(PROCESSED_FOLDER, "modified_audio.wav")
     original_audio.export(modified_audio_path, format="wav")
 
+    # ✅ Optimized FFmpeg Processing for Video Merging
     subprocess.run([
         "ffmpeg", "-i", input_video_path, "-i", modified_audio_path, "-c:v", "libx264", "-preset", "ultrafast",
         "-map", "0:v:0", "-map", "1:a:0", "-shortest", output_video_path, "-y"
     ])
+
+def async_process_audio(input_video_path, timestamps_file, output_video_path):
+    """ Runs processing asynchronously to avoid timeouts """
+    threading.Thread(target=process_audio_with_mute, args=(input_video_path, timestamps_file, output_video_path)).start()
 
 @app.route('/upload', methods=['POST'])
 def upload_files():
@@ -107,7 +112,14 @@ def process_video():
     if not os.path.exists(video_path) or not os.path.exists(timestamps_path):
         return jsonify({"error": "Files missing, upload first"}), 400
 
-    process_audio_with_mute(video_path, timestamps_path, output_path)
+    # ✅ Run Processing Asynchronously
+    async_process_audio(video_path, timestamps_path, output_path)
+
+    return jsonify({"message": "Processing started, check back later"}), 202
+
+@app.route('/download', methods=['GET'])
+def download_video():
+    output_path = os.path.join(PROCESSED_FOLDER, "output.mp4")
 
     if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
         return send_file(output_path, as_attachment=True)
