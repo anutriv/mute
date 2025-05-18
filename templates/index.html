@@ -27,7 +27,7 @@
     <a id="download" href="#" download="output.mp4">Download Muted Video</a>
 
     <script>
-        const renderURL = "https://mute-77q0.onrender.com/";  // Replace with your actual Render Flask URL
+        const renderURL = "https://mute-77q0.onrender.com";  // Ensure this is your actual Flask URL
         let uploaded = false;
 
         function uploadFiles() {
@@ -43,25 +43,29 @@
             formData.append("video", video);
             formData.append("timestamps", timestamps);
 
-            document.getElementById("progress").style.display = "block";  // Show progress
+            document.getElementById("progress").style.display = "block";
             document.getElementById("progressPercent").textContent = "0%";
 
             fetch(renderURL + "/upload", {
                 method: "POST",
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => response.text())  // Read response as text to handle any format
             .then(data => {
-                if (data.success) {
+                console.log("Upload response:", data);  // Debugging log
+                if (data.includes("success")) {
                     document.getElementById("progressPercent").textContent = "100%";
                     alert("Files uploaded successfully! Starting processing...");
                     uploaded = true;
                     processVideo();
                 } else {
-                    alert("Upload failed.");
+                    alert("Upload failed: " + data);
                 }
             })
-            .catch(error => alert("Error uploading files: " + error));
+            .catch(error => {
+                alert("Error uploading files: " + error);
+                console.error("Fetch error:", error);
+            });
         }
 
         function processVideo() {
@@ -78,7 +82,10 @@
                 document.getElementById("download").style.display = "inline";
                 alert("Muted video is ready for download!");
             })
-            .catch(error => alert("Error processing video: " + error));
+            .catch(error => {
+                alert("Error processing video: " + error);
+                console.error("Processing error:", error);
+            });
         }
     </script>
 
