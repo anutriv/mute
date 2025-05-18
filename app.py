@@ -1,9 +1,11 @@
 import os
 import subprocess
 from flask import Flask, request, send_file, jsonify, render_template
+from flask_cors import CORS  # Import CORS
 from pydub import AudioSegment
 
 app = Flask(__name__)
+CORS(app)
 
 UPLOAD_FOLDER = "uploads"
 PROCESSED_FOLDER = "processed"
