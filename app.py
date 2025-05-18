@@ -5,7 +5,7 @@ from flask_cors import CORS  # Import CORS
 from pydub import AudioSegment
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})  # Allow all origins
 
 UPLOAD_FOLDER = "uploads"
 PROCESSED_FOLDER = "processed"
