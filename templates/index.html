@@ -59,13 +59,22 @@
             };
 
             xhr.onload = function() {
-                if (xhr.status === 200) {
-                    console.log("Upload Response:", xhr.responseText);  // Debug log
-                    alert("Files uploaded successfully! Starting processing...");
-                    uploaded = true;
-                    processVideo();
-                } else {
-                    alert("Upload failed: " + xhr.responseText);
+                console.log("Upload Response:", xhr.responseText);  // Debug log
+                try {
+                    let jsonData = JSON.parse(xhr.responseText);
+                    console.log("Parsed JSON:", jsonData);
+
+                    if (jsonData.success) {
+                        document.getElementById("progressPercent").textContent = "100%";
+                        alert("Files uploaded successfully! Starting processing...");
+                        uploaded = true;
+                        processVideo();
+                    } else {
+                        alert("Upload failed: " + jsonData.error);
+                    }
+                } catch (error) {
+                    console.error("JSON Parsing Error:", error);
+                    alert("Unexpected server response. Check console for details.");
                 }
             };
 
