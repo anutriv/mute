@@ -1,7 +1,6 @@
 import os
 import subprocess
 from flask import Flask, request, send_file
-from pydub import AudioSegment
 
 app = Flask(__name__)
 
@@ -10,15 +9,14 @@ PROCESSED_FOLDER = "processed"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
-def process_audio_with_mute(video_path, timestamps_file, output_path):
-    # Step 1: Extract audio from the input video
+def process_audio_with_mute(video_path, timestamps_path, output_path):
     extracted_audio_path = os.path.join(PROCESSED_FOLDER, "extracted_audio.wav")
     subprocess.run(["ffmpeg", "-i", video_path, "-q:a", "0", "-map", "a", extracted_audio_path, "-y"])
 
-    # Step 2: Process the original audio to mute specified time ranges
+    from pydub import AudioSegment
     original_audio = AudioSegment.from_file(extracted_audio_path)
 
-    with open(timestamps_file, "r") as file:
+    with open(timestamps_path, "r") as file:
         timestamps = file.readlines()
 
     for line in timestamps:
@@ -34,7 +32,6 @@ def process_audio_with_mute(video_path, timestamps_file, output_path):
     modified_audio_path = os.path.join(PROCESSED_FOLDER, "modified_audio.wav")
     original_audio.export(modified_audio_path, format="wav")
 
-    # Step 4: Merge new audio with original video
     subprocess.run([
         "ffmpeg", "-i", video_path, "-i", modified_audio_path, "-c:v", "copy", "-map", "0:v:0", "-map", "1:a:0",
         "-shortest", output_path, "-y"
@@ -48,12 +45,23 @@ def upload_files():
     video_file = request.files['video']
     timestamps_file = request.files['timestamps']
 
-    video_path = os.path.join(UPLOAD_FOLDER, video_file.filename)
-    timestamps_path = os.path.join(UPLOAD_FOLDER, timestamps_file.filename)
+    video_path = os.path.join(UPLOAD_FOLDER, "input.mp4")
+    timestamps_path = os.path.join(UPLOAD_FOLDER, "timestamps.txt")
     output_path = os.path.join(PROCESSED_FOLDER, "output.mp4")
 
     video_file.save(video_path)
     timestamps_file.save(timestamps_path)
+
+    return {"message": "Files uploaded successfully"}, 200
+
+@app.route('/process', methods=['GET'])
+def process_video():
+    video_path = os.path.join(UPLOAD_FOLDER, "input.mp4")
+    timestamps_path = os.path.join(UPLOAD_FOLDER, "timestamps.txt")
+    output_path = os.path.join(PROCESSED_FOLDER, "output.mp4")
+
+    if not os.path.exists(video_path) or not os.path.exists(timestamps_path):
+        return {"error": "Files missing, upload first"}, 400
 
     process_audio_with_mute(video_path, timestamps_path, output_path)
 
