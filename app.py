@@ -20,7 +20,8 @@ PROCESSED_FOLDER = "processed"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
-app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # Increase max file upload size (200MB)
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # Set max upload size to 2GB
+
 
 @app.route('/', methods=['GET'])
 def home():
