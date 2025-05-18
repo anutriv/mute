@@ -60,7 +60,7 @@ def process_audio_with_mute(input_video_path, timestamps_file, output_video_path
     # ✅ Optimized FFmpeg Processing for Video Merging
     subprocess.run([
         "ffmpeg", "-i", input_video_path, "-i", modified_audio_path, "-c:v", "libx264", "-preset", "ultrafast",
-        "-map", "0:v:0", "-map", "1:a:0", "-shortest", output_video_path, "-y"
+        "-crf", "28", "-map", "0:v:0", "-map", "1:a:0", "-shortest", output_video_path, "-y"
     ])
 
 def async_process_audio(input_video_path, timestamps_file, output_video_path):
