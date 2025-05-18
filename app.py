@@ -5,7 +5,15 @@ from flask_cors import CORS  # Enable CORS globally
 from pydub import AudioSegment
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True)  # Ensure CORS allows all requests
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)  # Ensure CORS allows all requests
+
+# Add explicit headers for CORS in all responses
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
 
 UPLOAD_FOLDER = "uploads"
 PROCESSED_FOLDER = "processed"
@@ -16,7 +24,7 @@ app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # Increase max file upload
 
 @app.route('/', methods=['GET'])
 def home():
-    return render_template('index.html')  # Explicitly set HTTP method to GET
+    return render_template('index.html')
 
 def process_audio_with_mute(input_video_path, timestamps_file, output_video_path):
     extracted_audio_path = os.path.join(PROCESSED_FOLDER, "extracted_audio.wav")
