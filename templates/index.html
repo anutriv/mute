@@ -27,8 +27,13 @@
     <a id="download" href="#" download="output.mp4">Download Muted Video</a>
 
     <script>
-        const renderURL = "https://mute-77q0.onrender.com";  // Ensure this is your actual Flask URL
+        const renderURL = "https://mute-77q0.onrender.com";  // Update this with your actual Render Flask URL
         let uploaded = false;
+
+        // Ensure no fetch request runs on page load
+        window.onload = function() {
+            console.log("Page loaded successfully.");
+        };
 
         function uploadFiles() {
             let video = document.getElementById("videoFile").files[0];
