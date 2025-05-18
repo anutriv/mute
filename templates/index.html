@@ -1,98 +1,83 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mute Video Sections</title>
-    <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin: 50px; }
-        input, button { margin: 10px; }
-        #progress { display: none; }
-        #download { display: none; }
-    </style>
-</head>
-<body>
+<script>
+    const renderURL = "https://mute-77q0.onrender.com";  // Ensure this is your actual Flask URL
+    let uploaded = false;
 
-    <h2>Upload MP4 and Timestamp File</h2>
-    <label for="videoFile">Choose MP4 File:</label>
-    <input type="file" id="videoFile" accept="video/mp4"><br>
-    <label for="timestampsFile">Choose Timestamp File:</label>
-    <input type="file" id="timestampsFile" accept=".txt"><br>
+    window.onload = function() {
+        console.log("Page loaded successfully.");
+    };
 
-    <button onclick="uploadFiles()">Upload Files</button>
-    <p id="progress">Uploading: <span id="progressPercent">0%</span></p>
+    function uploadFiles() {
+        let video = document.getElementById("videoFile").files[0];
+        let timestamps = document.getElementById("timestampsFile").files[0];
 
-    <button id="processButton" onclick="processVideo()" style="display:none;">Get Muted Video</button>
-    <br>
-    <a id="download" href="#" download="output.mp4">Download Muted Video</a>
-
-    <script>
-        const renderURL = "https://mute-77q0.onrender.com";  // Update this with your actual Render Flask URL
-        let uploaded = false;
-
-        // Ensure no fetch request runs on page load
-        window.onload = function() {
-            console.log("Page loaded successfully.");
-        };
-
-        function uploadFiles() {
-            let video = document.getElementById("videoFile").files[0];
-            let timestamps = document.getElementById("timestampsFile").files[0];
-
-            if (!video || !timestamps) {
-                alert("Please select both files.");
-                return;
-            }
-
-            let formData = new FormData();
-            formData.append("video", video);
-            formData.append("timestamps", timestamps);
-
-            document.getElementById("progress").style.display = "block";
-            document.getElementById("progressPercent").textContent = "0%";
-
-            fetch(renderURL + "/upload", {
-                method: "POST",
-                body: formData
-            })
-            .then(response => response.text())  // Read response as text to handle any format
-            .then(data => {
-                console.log("Upload response:", data);  // Debugging log
-                if (data.includes("success")) {
-                    document.getElementById("progressPercent").textContent = "100%";
-                    alert("Files uploaded successfully! Starting processing...");
-                    uploaded = true;
-                    processVideo();
-                } else {
-                    alert("Upload failed: " + data);
-                }
-            })
-            .catch(error => {
-                alert("Error uploading files: " + error);
-                console.error("Fetch error:", error);
-            });
+        if (!video || !timestamps) {
+            alert("Please select both files.");
+            return;
         }
 
-        function processVideo() {
-            if (!uploaded) {
-                alert("Upload files first.");
-                return;
-            }
+        let formData = new FormData();
+        formData.append("video", video);
+        formData.append("timestamps", timestamps);
 
-            fetch(renderURL + "/process")
-            .then(response => response.blob())
-            .then(blob => {
-                let url = URL.createObjectURL(blob);
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", renderURL + "/upload", true);
+
+        // Track upload progress in real-time
+        xhr.upload.onprogress = function(event) {
+            if (event.lengthComputable) {
+                let percentComplete = Math.round((event.loaded / event.total) * 100);
+                document.getElementById("progressPercent").textContent = percentComplete + "%";
+            }
+        };
+
+        // Handle successful upload
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                alert("Files uploaded successfully! Starting processing...");
+                uploaded = true;
+                processVideo();
+            } else {
+                alert("Upload failed: " + xhr.responseText);
+            }
+        };
+
+        // Handle errors during upload
+        xhr.onerror = function() {
+            alert("Error uploading files.");
+            console.error("XHR Error:", xhr.statusText);
+        };
+
+        xhr.send(formData);
+    }
+
+    function processVideo() {
+        if (!uploaded) {
+            alert("Upload files first.");
+            return;
+        }
+
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", renderURL + "/process", true);
+        xhr.responseType = "blob"; // Expect binary file (video)
+
+        // Handle successful processing
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                let url = URL.createObjectURL(xhr.response);
                 document.getElementById("download").href = url;
                 document.getElementById("download").style.display = "inline";
                 alert("Muted video is ready for download!");
-            })
-            .catch(error => {
-                alert("Error processing video: " + error);
-                console.error("Processing error:", error);
-            });
-        }
-    </script>
+            } else {
+                alert("Processing failed: " + xhr.responseText);
+            }
+        };
 
-</body>
-</html>
+        // Handle errors during processing
+        xhr.onerror = function() {
+            alert("Error processing video.");
+            console.error("Processing Error:", xhr.statusText);
+        };
+
+        xhr.send();
+    }
+</script>
