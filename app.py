@@ -19,7 +19,7 @@ PROCESSED_FOLDER = "processed"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
-app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # 2GB file limit
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # Allow up to 2GB uploads
 
 @app.route('/', methods=['GET'])
 def home():
@@ -63,13 +63,30 @@ def upload_files():
     video_path = os.path.join(UPLOAD_FOLDER, "input.mp4")
     timestamps_path = os.path.join(UPLOAD_FOLDER, "timestamps.txt")
 
-    video_file.save(video_path)
-    timestamps_file.save(timestamps_path)
+    try:
+        # Write video file in chunks
+        with open(video_path, "wb") as f:
+            while True:
+                chunk = video_file.stream.read(1024 * 1024)  # Read 1MB chunks
+                if not chunk:
+                    break
+                f.write(chunk)
 
-    if os.path.exists(video_path) and os.path.exists(timestamps_path):
-        return jsonify({"success": True, "message": "Upload completed"}), 200
-    else:
-        return jsonify({"error": "File saving failed"}), 500
+        # Write timestamps file in chunks
+        with open(timestamps_path, "wb") as f:
+            while True:
+                chunk = timestamps_file.stream.read(1024)
+                if not chunk:
+                    break
+                f.write(chunk)
+
+        if os.path.exists(video_path) and os.path.exists(timestamps_path):
+            return jsonify({"success": True, "message": "Upload completed"}), 200
+        else:
+            return jsonify({"error": "File saving failed"}), 500
+
+    except Exception as e:
+        return jsonify({"error": f"Exception during file save: {str(e)}"}), 500
 
 @app.route('/process', methods=['GET'])
 def process_video():
