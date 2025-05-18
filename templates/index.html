@@ -6,24 +6,28 @@
     <title>Mute Video Sections</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; margin: 50px; }
-        input { margin: 10px; }
-        button { padding: 10px; cursor: pointer; }
+        input, button { margin: 10px; }
+        #progress { display: none; }
         #download { display: none; }
     </style>
 </head>
 <body>
 
     <h2>Upload MP4 and Timestamp File</h2>
-    <input type="file" id="videoFile" accept="video/mp4">
-    <input type="file" id="timestampsFile" accept=".txt">
-    <br>
+    <label for="videoFile">Choose MP4 File:</label>
+    <input type="file" id="videoFile" accept="video/mp4"><br>
+    <label for="timestampsFile">Choose Timestamp File:</label>
+    <input type="file" id="timestampsFile" accept=".txt"><br>
+
     <button onclick="uploadFiles()">Upload Files</button>
+    <p id="progress">Uploading: <span id="progressPercent">0%</span></p>
+
     <button id="processButton" onclick="processVideo()" style="display:none;">Get Muted Video</button>
     <br>
     <a id="download" href="#" download="output.mp4">Download Muted Video</a>
 
     <script>
-        const renderURL = "https://your-render-app-url/upload";  // Replace with your Render Flask URL
+        const renderURL = "https://your-render-app-url";  // Replace with your actual Render Flask URL
         let uploaded = false;
 
         function uploadFiles() {
@@ -36,15 +40,23 @@
             }
 
             let formData = new FormData();
-            formData.append("video", video, "input.mp4");  // Rename video file
-            formData.append("timestamps", timestamps, "timestamps.txt");  // Rename timestamps file
+            formData.append("video", video);
+            formData.append("timestamps", timestamps);
 
-            fetch(renderURL, { method: "POST", body: formData })
-            .then(response => {
-                if (response.ok) {
-                    alert("Files uploaded successfully!");
+            document.getElementById("progress").style.display = "block";  // Show progress
+            document.getElementById("progressPercent").textContent = "0%";
+
+            fetch(renderURL + "/upload", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById("progressPercent").textContent = "100%";
+                    alert("Files uploaded successfully! Starting processing...");
                     uploaded = true;
-                    document.getElementById("processButton").style.display = "inline";
+                    processVideo();
                 } else {
                     alert("Upload failed.");
                 }
@@ -58,7 +70,7 @@
                 return;
             }
 
-            fetch(renderURL.replace("/upload", "/process"))  // Replace with your Render Flask process endpoint
+            fetch(renderURL + "/process")
             .then(response => response.blob())
             .then(blob => {
                 let url = URL.createObjectURL(blob);
