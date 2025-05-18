@@ -1,13 +1,12 @@
 import os
 import subprocess
 from flask import Flask, request, send_file, jsonify, render_template
-from flask_cors import CORS  # Enable CORS globally
+from flask_cors import CORS
 from pydub import AudioSegment
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)  # Ensure CORS allows all requests
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
-# Add explicit headers for CORS in all responses
 @app.after_request
 def add_cors_headers(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
@@ -20,7 +19,7 @@ PROCESSED_FOLDER = "processed"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
-app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # Allow 2GB uploads
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # 2GB file limit
 
 @app.route('/', methods=['GET'])
 def home():
@@ -63,13 +62,12 @@ def upload_files():
 
     video_path = os.path.join(UPLOAD_FOLDER, "input.mp4")
     timestamps_path = os.path.join(UPLOAD_FOLDER, "timestamps.txt")
-    output_path = os.path.join(PROCESSED_FOLDER, "output.mp4")
 
     video_file.save(video_path)
     timestamps_file.save(timestamps_path)
 
     if os.path.exists(video_path) and os.path.exists(timestamps_path):
-        return jsonify({"success": True}), 200
+        return jsonify({"success": True, "message": "Upload completed"}), 200
     else:
         return jsonify({"error": "File saving failed"}), 500
 
@@ -84,15 +82,10 @@ def process_video():
 
     process_audio_with_mute(video_path, timestamps_path, output_path)
 
-    # Validate output file before sending
-    if os.path.exists(output_path):
-        file_size = os.path.getsize(output_path)
-        if file_size > 0:
-            return send_file(output_path, as_attachment=True)
-        else:
-            return jsonify({"error": "Processing failed, output file is empty"}), 500
+    if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+        return send_file(output_path, as_attachment=True)
     else:
-        return jsonify({"error": "Processing failed, output file not created"}), 500
+        return jsonify({"error": "Processing failed, output file is empty"}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
