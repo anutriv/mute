@@ -14,9 +14,9 @@ os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
 app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # Increase max file upload size (200MB)
 
-@app.route('/')
+@app.route('/', methods=['GET'])
 def home():
-    return render_template('index.html')
+    return render_template('index.html')  # Explicitly set HTTP method to GET
 
 def process_audio_with_mute(input_video_path, timestamps_file, output_video_path):
     extracted_audio_path = os.path.join(PROCESSED_FOLDER, "extracted_audio.wav")
