@@ -20,8 +20,7 @@ PROCESSED_FOLDER = "processed"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
-app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # Set max upload size to 2GB
-app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable caching
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # Allow 2GB uploads
 
 @app.route('/', methods=['GET'])
 def home():
@@ -85,7 +84,15 @@ def process_video():
 
     process_audio_with_mute(video_path, timestamps_path, output_path)
 
-    return send_file(output_path, as_attachment=True)
+    # Validate output file before sending
+    if os.path.exists(output_path):
+        file_size = os.path.getsize(output_path)
+        if file_size > 0:
+            return send_file(output_path, as_attachment=True)
+        else:
+            return jsonify({"error": "Processing failed, output file is empty"}), 500
+    else:
+        return jsonify({"error": "Processing failed, output file not created"}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
