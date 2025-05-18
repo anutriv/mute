@@ -1,17 +1,18 @@
 import os
 import subprocess
 from flask import Flask, request, send_file, jsonify, render_template
-from flask_cors import CORS  # Import CORS
+from flask_cors import CORS  # Enable CORS globally
 from pydub import AudioSegment
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True)
-
+CORS(app, supports_credentials=True)  # Ensure CORS allows all requests
 
 UPLOAD_FOLDER = "uploads"
 PROCESSED_FOLDER = "processed"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
+
+app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # Increase max file upload size (200MB)
 
 @app.route('/')
 def home():
