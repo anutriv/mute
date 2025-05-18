@@ -20,7 +20,6 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # Allow up to 2GB uploads
-app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Prevent caching issues
 
 @app.route('/', methods=['GET'])
 def home():
@@ -28,11 +27,19 @@ def home():
 
 def process_audio_with_mute(input_video_path, timestamps_file, output_video_path):
     extracted_audio_path = os.path.join(PROCESSED_FOLDER, "extracted_audio.wav")
-    subprocess.run([
-    "ffmpeg", "-i", input_video_path, "-c:a", "aac", "-b:a", "128k", "-vn", extracted_audio_path, "-y"
-])
 
-    original_audio = AudioSegment.from_file(extracted_audio_path)
+    # ✅ Fix 1: Extract audio using PCM encoding instead of AAC
+    subprocess.run([
+        "ffmpeg", "-i", input_video_path, "-vn", "-acodec", "pcm_s16le", "-ar", "44100",
+        "-ac", "2", extracted_audio_path, "-y"
+    ])
+
+    # ✅ Fix 2: Verify pydub can read the extracted audio file
+    try:
+        original_audio = AudioSegment.from_file(extracted_audio_path, format="wav")
+    except Exception as e:
+        print(f"Error loading audio file: {str(e)}")
+        return jsonify({"error": "Audio decoding failed"}), 500
 
     with open(timestamps_file, "r") as file:
         timestamps = file.readlines()
@@ -51,10 +58,9 @@ def process_audio_with_mute(input_video_path, timestamps_file, output_video_path
     original_audio.export(modified_audio_path, format="wav")
 
     subprocess.run([
-    "ffmpeg", "-i", input_video_path, "-i", modified_audio_path, "-c:v", "libx264", "-preset", "ultrafast",
-    "-map", "0:v:0", "-map", "1:a:0", "-shortest", output_video_path, "-y"
-])
-
+        "ffmpeg", "-i", input_video_path, "-i", modified_audio_path, "-c:v", "libx264", "-preset", "ultrafast",
+        "-map", "0:v:0", "-map", "1:a:0", "-shortest", output_video_path, "-y"
+    ])
 
 @app.route('/upload', methods=['POST'])
 def upload_files():
