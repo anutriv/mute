@@ -1,6 +1,6 @@
 import os
 import subprocess
-from flask import Flask, request, send_file
+from flask import Flask, request, send_file, render_template
 from pydub import AudioSegment
 
 app = Flask(__name__)
@@ -9,6 +9,10 @@ UPLOAD_FOLDER = "uploads"
 PROCESSED_FOLDER = "processed"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
+
+@app.route('/')
+def home():
+    return render_template('index.html')  # Serve the home page
 
 def process_audio_with_mute(input_video_path, timestamps_file, output_video_path):
     # Step 1: Extract audio from the input video
