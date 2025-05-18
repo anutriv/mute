@@ -20,6 +20,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # Allow up to 2GB uploads
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Prevent caching issues
 
 @app.route('/', methods=['GET'])
 def home():
