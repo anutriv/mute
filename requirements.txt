@@ -1,5 +1,0 @@
-flask
-pydub
-ffmpeg-python
-gunicorn
-flask-cors
